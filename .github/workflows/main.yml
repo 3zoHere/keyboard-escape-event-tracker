@@ -29,6 +29,7 @@ jobs:
       - name: Run Roblox Events
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          CONTROL_WEBHOOK: ${{ secrets.CONTROL_WEBHOOK }}
         run: python main.py
 
       - name: Save event state
@@ -38,7 +39,7 @@ jobs:
 
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add events_state.json alerts_state.json
+          git add events_state.json alerts_state.json stats_state.json control_state.json
 
           if git diff --cached --quiet; then
 
@@ -46,7 +47,7 @@ jobs:
 
           else
 
-            git commit -m "Update Roblox event state"
+            git commit -m "Update Roblox bot state"
 
             git push
 
