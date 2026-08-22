@@ -1,4 +1,4 @@
-name: Test Roblox Events
+name: Roblox Events Test
 
 on:
   workflow_dispatch:
@@ -21,3 +21,5 @@ jobs:
 
       - name: Run test
         run: python main.py
+
+
