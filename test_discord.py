@@ -1,28 +1,18 @@
-name: Test Discord Webhook
+import os
+import requests
 
-on:
-  workflow_dispatch:
+WEBHOOK_URL = os.environ["DISCORD_WEBHOOK"]
 
-permissions:
-  contents: read
+payload = {
+    "username": "Roblox Events",
+    "content": "🧪 **Discord Webhook Test**\n\nإذا تشوف الصورة الجديدة، فالاختبار نجح ✅"
+}
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
+response = requests.post(
+    WEBHOOK_URL,
+    json=payload,
+    timeout=30
+)
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install requests
-        run: pip install requests
-
-      - name: Send Discord Test
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        run: python test_discord.py
+print("Discord status:", response.status_code)
+response.raise_for_status()
