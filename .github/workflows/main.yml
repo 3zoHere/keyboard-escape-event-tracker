@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -32,14 +33,21 @@ jobs:
 
       - name: Save event state
         run: |
+
           git config user.name "Roblox Events Bot"
+
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add events_state.json
+          git add events_state.json alerts_state.json
 
           if git diff --cached --quiet; then
+
             echo "No state changes."
+
           else
+
             git commit -m "Update Roblox event state"
+
             git push
+
           fi
