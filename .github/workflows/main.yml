@@ -1,10 +1,16 @@
-name: Roblox Events Test
+name: Roblox Events
 
 on:
   workflow_dispatch:
 
+  schedule:
+    - cron: "*/5 * * * *"
+
+permissions:
+  contents: write
+
 jobs:
-  test:
+  check-events:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,7 +25,21 @@ jobs:
       - name: Install requests
         run: pip install requests
 
-      - name: Run test
+      - name: Run Roblox Events
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: python main.py
 
+      - name: Save event state
+        run: |
+          git config user.name "Roblox Events Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+          git add events_state.json
+
+          if git diff --cached --quiet; then
+            echo "No state changes."
+          else
+            git commit -m "Update Roblox event state"
+            git push
+          fi
