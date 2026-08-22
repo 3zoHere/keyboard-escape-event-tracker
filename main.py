@@ -69,84 +69,80 @@ def parse_time(value):
     )
 
 
-def send_discord(content=None, event=None):
-    payload = {
-        "username": "Roblox Events"
+def send_to_discord(event, message):
+    event_id = event["id"]
+
+    title = (
+        event.get("displayTitle")
+        or event.get("title")
+        or "Roblox Event"
+    )
+
+    subtitle = (
+        event.get("displaySubtitle")
+        or event.get("subtitle")
+        or ""
+    )
+
+    description = (
+        event.get("displayDescription")
+        or event.get("description")
+        or ""
+    )
+
+    event_time = event.get("eventTime", {})
+
+    start = event_time.get("startUtc")
+    end = event_time.get("endUtc")
+
+    event_url = f"https://www.roblox.com/events/{event_id}"
+
+    fields = []
+
+    if subtitle:
+        fields.append({
+            "name": "Details",
+            "value": subtitle[:1024],
+            "inline": False
+        })
+
+    if start:
+        start_timestamp = int(
+            parse_time(start).timestamp()
+        )
+
+        fields.append({
+            "name": "Starts",
+            "value": f"<t:{start_timestamp}:F>",
+            "inline": True
+        })
+
+    if end:
+        end_timestamp = int(
+            parse_time(end).timestamp()
+        )
+
+        fields.append({
+            "name": "Ends",
+            "value": f"<t:{end_timestamp}:F>",
+            "inline": True
+        })
+
+    embed = {
+        "title": title,
+        "url": event_url,
+        "description": description[:4096],
+        "fields": fields,
+        "footer": {
+            "text": "SecretVerse Roblox Events"
+        }
     }
 
-    if content:
-        payload["content"] = content
-
-    if event:
-        event_id = event["id"]
-
-        title = (
-            event.get("displayTitle")
-            or event.get("title")
-            or "Roblox Event"
-        )
-
-        subtitle = (
-            event.get("displaySubtitle")
-            or event.get("subtitle")
-            or ""
-        )
-
-        description = (
-            event.get("displayDescription")
-            or event.get("description")
-            or ""
-        )
-
-        event_time = event.get("eventTime", {})
-
-        start = event_time.get("startUtc")
-        end = event_time.get("endUtc")
-
-        event_url = f"https://www.roblox.com/events/{event_id}"
-
-        fields = []
-
-        if subtitle:
-            fields.append({
-                "name": "Details",
-                "value": subtitle[:1024],
-                "inline": False
-            })
-
-        if start:
-            start_timestamp = int(
-                parse_time(start).timestamp()
-            )
-
-            fields.append({
-                "name": "Starts",
-                "value": f"<t:{start_timestamp}:F>",
-                "inline": True
-            })
-
-        if end:
-            end_timestamp = int(
-                parse_time(end).timestamp()
-            )
-
-            fields.append({
-                "name": "Ends",
-                "value": f"<t:{end_timestamp}:F>",
-                "inline": True
-            })
-
-        embed = {
-            "title": title,
-            "url": event_url,
-            "description": description[:4096],
-            "fields": fields,
-            "footer": {
-                "text": "SecretVerse Roblox Events"
-            }
-        }
-
-        payload["embeds"] = [embed]
+    payload = {
+        "username": "Roblox Events",
+        "content": message,
+        "embeds": [embed]
+    }
 
     response = requests.post(
         WEBHOOK_URL,
@@ -156,7 +152,9 @@ def send_discord(content=None, event=None):
 
     response.raise_for_status()
 
-    print("Discord status:", response.status_code)
+    print(
+        f"Discord message sent successfully: {response.status_code}"
+    )
 
 
 def send_new_event(event):
@@ -166,12 +164,14 @@ def send_new_event(event):
         or "New Roblox Event"
     )
 
-    send_discord(
-        content=f"📢 **New Event!**\n**{title}**",
-        event=event
+    send_to_discord(
+        event,
+        f"📢 **NEW EVENT!**\n**{title}**"
     )
 
-    print(f"New event announced: {event['id']}")
+    print(
+        f"New event announced: {event['id']}"
+    )
 
 
 def send_alert(event, alert_type):
@@ -181,21 +181,30 @@ def send_alert(event, alert_type):
         or "Roblox Event"
     )
 
-    event_id = event["id"]
-
     messages = {
-        "1h": f"🟡 **Event starting in 1 hour!**\n**{title}**",
-        "15m": f"🟠 **Event starting in 15 minutes!**\n**{title}**",
-        "start": f"🔴 **EVENT IS LIVE NOW!**\n**{title}**"
+        "1h": (
+            f"🟡 **EVENT STARTING IN 1 HOUR!**\n"
+            f"**{title}**"
+        ),
+
+        "15m": (
+            f"🟠 **EVENT STARTING IN 15 MINUTES!**\n"
+            f"**{title}**"
+        ),
+
+        "start": (
+            f"🔴 **EVENT IS LIVE NOW!**\n"
+            f"**{title}**"
+        )
     }
 
-    send_discord(
-        content=messages[alert_type],
-        event=event
+    send_to_discord(
+        event,
+        messages[alert_type]
     )
 
     print(
-        f"Sent {alert_type} alert for event {event_id}"
+        f"Sent {alert_type} alert for event {event['id']}"
     )
 
 
@@ -203,16 +212,23 @@ def check_alerts(events, alerts_state):
     now = datetime.now(timezone.utc)
 
     for event in events:
+
         event_id = str(event["id"])
 
         event_time = event.get("eventTime", {})
-        start = parse_time(event_time.get("startUtc"))
-        end = parse_time(event_time.get("endUtc"))
+
+        start = parse_time(
+            event_time.get("startUtc")
+        )
+
+        end = parse_time(
+            event_time.get("endUtc")
+        )
 
         if not start:
             continue
 
-        # Don't send alerts for ended events
+        # Ignore ended events
         if end and now >= end:
             continue
 
@@ -225,44 +241,73 @@ def check_alerts(events, alerts_state):
             start - now
         ).total_seconds()
 
-        # 1 hour alert
+        # -------------------------
+        # 1 HOUR ALERT
+        # -------------------------
+
         if (
             "1h" not in sent_alerts
             and 0 < seconds_until_start <= 3600
         ):
-            send_alert(event, "1h")
+
+            send_alert(
+                event,
+                "1h"
+            )
+
             sent_alerts.append("1h")
 
-        # 15 minute alert
+        # -------------------------
+        # 15 MINUTE ALERT
+        # -------------------------
+
         if (
             "15m" not in sent_alerts
             and 0 < seconds_until_start <= 900
         ):
-            send_alert(event, "15m")
+
+            send_alert(
+                event,
+                "15m"
+            )
+
             sent_alerts.append("15m")
 
-        # Event is live
+        # -------------------------
+        # EVENT STARTED
+        # -------------------------
+
         if (
             "start" not in sent_alerts
             and seconds_until_start <= 0
         ):
-            send_alert(event, "start")
+
+            send_alert(
+                event,
+                "start"
+            )
+
             sent_alerts.append("start")
 
     return alerts_state
 
 
 def main():
+
     events = get_events()
 
     # Only SecretVerse Studio events
     events = [
         event
         for event in events
-        if str(event.get("host", {}).get("hostId")) == GROUP_ID
+        if str(
+            event.get("host", {}).get("hostId")
+        ) == GROUP_ID
     ]
 
-    print(f"Found {len(events)} SecretVerse events.")
+    print(
+        f"Found {len(events)} SecretVerse events."
+    )
 
     events_state = load_json(
         EVENTS_STATE_FILE,
@@ -279,51 +324,71 @@ def main():
         for event in events
     }
 
-    # First run:
-    # Register existing events without announcing them.
+    # -------------------------
+    # NEW EVENTS
+    # -------------------------
+
     if events_state is None:
+
         save_json(
             EVENTS_STATE_FILE,
             {
-                "event_ids": sorted(current_ids)
+                "event_ids": sorted(
+                    current_ids
+                )
             }
         )
 
         print(
-            "First run: existing events saved. "
-            "No new-event announcements sent."
+            "First run: existing events saved."
         )
 
     else:
+
         old_ids = set(
-            events_state.get("event_ids", [])
+            events_state.get(
+                "event_ids",
+                []
+            )
         )
 
         new_events = [
             event
             for event in events
-            if str(event["id"]) not in old_ids
+            if str(event["id"])
+            not in old_ids
         ]
 
         new_events.sort(
-            key=lambda event: event.get("createdUtc", "")
+            key=lambda event:
+            event.get(
+                "createdUtc",
+                ""
+            )
         )
 
         for event in new_events:
+
             send_new_event(event)
 
         save_json(
             EVENTS_STATE_FILE,
             {
-                "event_ids": sorted(current_ids)
+                "event_ids": sorted(
+                    current_ids
+                )
             }
         )
 
         print(
-            f"New events announced: {len(new_events)}"
+            f"New events announced: "
+            f"{len(new_events)}"
         )
 
-    # Check reminder notifications
+    # -------------------------
+    # EVENT ALERTS
+    # -------------------------
+
     alerts_state = check_alerts(
         events,
         alerts_state
@@ -333,6 +398,8 @@ def main():
         ALERTS_STATE_FILE,
         alerts_state
     )
+
+    print("Alert system check completed.")
 
 
 if __name__ == "__main__":
