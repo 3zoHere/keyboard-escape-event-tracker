@@ -3,8 +3,9 @@ name: Roblox Events
 on:
   workflow_dispatch:
 
+  on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "* * * * *"
 
 permissions:
   contents: write
