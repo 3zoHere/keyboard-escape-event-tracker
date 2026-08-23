@@ -3,6 +3,11 @@ import os
 import requests
 from datetime import datetime, timezone
 
+
+# ============================================================
+# CONFIGURATION
+# ============================================================
+
 GROUP_ID = "1074557114"
 UNIVERSE_ID = "9584852943"
 
@@ -18,22 +23,67 @@ EVENTS_STATE_FILE = "events_state.json"
 ALERTS_STATE_FILE = "alerts_state.json"
 STATS_STATE_FILE = "stats_state.json"
 CONTROL_STATE_FILE = "control_state.json"
+EVENT_MESSAGES_STATE_FILE = "event_messages_state.json"
 
+
+# ============================================================
+# EMBED COLOR
+# ============================================================
+
+# Pink
+EMBED_COLOR = 0xFF69B4
+
+
+# ============================================================
+# JSON FUNCTIONS
+# ============================================================
 
 def load_json(filename, default):
+
     if not os.path.exists(filename):
         return default
 
-    with open(filename, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+
+        with open(
+            filename,
+            "r",
+            encoding="utf-8"
+        ) as f:
+
+            return json.load(f)
+
+    except Exception as e:
+
+        print(
+            f"Could not load {filename}: {e}"
+        )
+
+        return default
 
 
 def save_json(filename, data):
-    with open(filename, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
 
+    with open(
+        filename,
+        "w",
+        encoding="utf-8"
+    ) as f:
+
+        json.dump(
+            data,
+            f,
+            ensure_ascii=False,
+            indent=2
+        )
+
+
+# ============================================================
+# DEFAULT STATS
+# ============================================================
 
 def default_stats():
+
     return {
         "runs": 0,
         "events_checked": 0,
@@ -46,11 +96,17 @@ def default_stats():
     }
 
 
+# ============================================================
+# GET ROBLOX EVENTS
+# ============================================================
+
 def get_events():
+
     events = []
     cursor = ""
 
     while True:
+
         params = {}
 
         if cursor:
@@ -66,9 +122,16 @@ def get_events():
 
         data = response.json()
 
-        events.extend(data.get("data", []))
+        events.extend(
+            data.get(
+                "data",
+                []
+            )
+        )
 
-        cursor = data.get("nextPageCursor")
+        cursor = data.get(
+            "nextPageCursor"
+        )
 
         if not cursor:
             break
@@ -76,16 +139,83 @@ def get_events():
     return events
 
 
+# ============================================================
+# TIME FUNCTIONS
+# ============================================================
+
 def parse_time(value):
+
     if not value:
         return None
 
     return datetime.fromisoformat(
-        value.replace("Z", "+00:00")
+        value.replace(
+            "Z",
+            "+00:00"
+        )
     )
 
 
-def send_to_discord(event, message, stats):
+def get_timestamp(value):
+
+    parsed = parse_time(value)
+
+    if not parsed:
+        return None
+
+    return int(
+        parsed.timestamp()
+    )
+
+
+def format_time_remaining(start_time):
+
+    now = datetime.now(
+        timezone.utc
+    )
+
+    remaining = (
+        start_time - now
+    )
+
+    total_seconds = int(
+        remaining.total_seconds()
+    )
+
+    if total_seconds <= 0:
+
+        return "LIVE NOW"
+
+    days = (
+        total_seconds // 86400
+    )
+
+    hours = (
+        (total_seconds % 86400)
+        // 3600
+    )
+
+    minutes = (
+        (total_seconds % 3600)
+        // 60
+    )
+
+    return (
+        f"{days}d "
+        f"{hours}h "
+        f"{minutes}m"
+    )
+
+
+# ============================================================
+# EVENT PAYLOAD
+# ============================================================
+
+def build_event_payload(
+    event,
+    message
+):
+
     event_id = event["id"]
 
     title = (
@@ -106,97 +236,290 @@ def send_to_discord(event, message, stats):
         or ""
     )
 
-    event_time = event.get("eventTime", {})
+    event_time = event.get(
+        "eventTime",
+        {}
+    )
 
-    start = event_time.get("startUtc")
-    end = event_time.get("endUtc")
+    start = event_time.get(
+        "startUtc"
+    )
 
-    event_url = f"https://www.roblox.com/events/{event_id}"
+    end = event_time.get(
+        "endUtc"
+    )
+
+    event_url = (
+        f"https://www.roblox.com/events/"
+        f"{event_id}"
+    )
 
     fields = []
 
+    # --------------------------------------------------------
+    # DETAILS
+    # --------------------------------------------------------
+
     if subtitle:
+
         fields.append({
+
             "name": "Details",
+
             "value": subtitle[:1024],
+
             "inline": False
+
         })
+
+    # --------------------------------------------------------
+    # START
+    # --------------------------------------------------------
 
     if start:
-        start_timestamp = int(
-            parse_time(start).timestamp()
+
+        start_time = parse_time(
+            start
         )
 
-        fields.append({
-            "name": "Starts",
-            "value": f"<t:{start_timestamp}:F>",
-            "inline": True
-        })
+        start_timestamp = get_timestamp(
+            start
+        )
+
+        if (
+            start_time
+            and
+            start_timestamp
+        ):
+
+            time_remaining = (
+                format_time_remaining(
+                    start_time
+                )
+            )
+
+            fields.append({
+
+                "name": "Starts",
+
+                "value": (
+                    f"<t:{start_timestamp}:F>\n"
+                    f"<t:{start_timestamp}:R>"
+                ),
+
+                "inline": True
+
+            })
+
+            fields.append({
+
+                "name": "⏳ Time Remaining",
+
+                "value": (
+                    f"**{time_remaining}**"
+                ),
+
+                "inline": True
+
+            })
+
+    # --------------------------------------------------------
+    # END
+    # --------------------------------------------------------
 
     if end:
-        end_timestamp = int(
-            parse_time(end).timestamp()
+
+        end_timestamp = get_timestamp(
+            end
         )
 
-        fields.append({
-            "name": "Ends",
-            "value": f"<t:{end_timestamp}:F>",
-            "inline": True
-        })
+        if end_timestamp:
+
+            fields.append({
+
+                "name": "Ends",
+
+                "value": (
+                    f"<t:{end_timestamp}:F>\n"
+                    f"<t:{end_timestamp}:R>"
+                ),
+
+                "inline": True
+
+            })
+
+    # --------------------------------------------------------
+    # EMBED
+    # --------------------------------------------------------
 
     embed = {
+
         "title": title,
+
         "url": event_url,
+
         "description": description[:4096],
+
+        "color": EMBED_COLOR,
+
         "fields": fields,
+
         "footer": {
-            "text": "SecretVerse Roblox Events"
+
+            "text":
+                "SecretVerse Roblox Events"
+
         }
+
     }
+
+    # --------------------------------------------------------
+    # PAYLOAD
+    # --------------------------------------------------------
 
     payload = {
-        "username": "Roblox Events",
-        "content": message,
-        "embeds": [embed]
+
+        "username":
+            "Roblox Events",
+
+        "content":
+            message,
+
+        "embeds": [
+            embed
+        ]
+
     }
 
+    return payload
+
+
+# ============================================================
+# SEND DISCORD MESSAGE
+# ============================================================
+
+def send_to_discord(
+    event,
+    message,
+    stats
+):
+
+    payload = build_event_payload(
+        event,
+        message
+    )
+
+    # wait=true gives us the Discord message ID
+    url = (
+        f"{WEBHOOK_URL}"
+        "?wait=true"
+    )
+
     response = requests.post(
-        WEBHOOK_URL,
+        url,
         json=payload,
         timeout=30
     )
 
     response.raise_for_status()
 
+    message_data = response.json()
+
+    message_id = message_data.get(
+        "id"
+    )
+
     stats["notifications_sent"] += 1
 
     print(
-        f"Discord message sent successfully: {response.status_code}"
+        "Discord message sent successfully: "
+        f"{response.status_code}"
+    )
+
+    return message_id
+
+
+# ============================================================
+# EVENT MESSAGE STATE
+# ============================================================
+
+def save_event_message_id(
+    event_id,
+    message_id
+):
+
+    if not message_id:
+        return
+
+    state = load_json(
+        EVENT_MESSAGES_STATE_FILE,
+        {}
+    )
+
+    state[str(event_id)] = {
+
+        "message_id":
+            str(message_id)
+
+    }
+
+    save_json(
+        EVENT_MESSAGES_STATE_FILE,
+        state
     )
 
 
-def send_new_event(event, stats):
+# ============================================================
+# NEW EVENT
+# ============================================================
+
+def send_new_event(
+    event,
+    stats
+):
+
     title = (
         event.get("displayTitle")
         or event.get("title")
         or "New Roblox Event"
     )
 
-    send_to_discord(
+    message = (
+        f"📢 **NEW EVENT!**\n"
+        f"**{title}**"
+    )
+
+    message_id = send_to_discord(
         event,
-        f"📢 **NEW EVENT!**\n**{title}**",
+        message,
         stats
     )
 
+    save_event_message_id(
+        event["id"],
+        message_id
+    )
+
     stats["new_events"] += 1
+
     stats["last_event"] = title
 
     print(
-        f"New event announced: {event['id']}"
+        f"New event announced: "
+        f"{event['id']}"
     )
 
 
-def send_alert(event, alert_type, stats):
+# ============================================================
+# ALERTS
+# ============================================================
+
+def send_alert(
+    event,
+    alert_type,
+    stats
+):
+
     title = (
         event.get("displayTitle")
         or event.get("title")
@@ -204,6 +527,7 @@ def send_alert(event, alert_type, stats):
     )
 
     messages = {
+
         "1h": (
             f"🟡 **EVENT STARTING IN 1 HOUR!**\n"
             f"**{title}**"
@@ -218,56 +542,92 @@ def send_alert(event, alert_type, stats):
             f"🔴 **EVENT IS LIVE NOW!**\n"
             f"**{title}**"
         )
+
     }
 
-    send_to_discord(
+    message_id = send_to_discord(
         event,
         messages[alert_type],
         stats
     )
 
+    save_event_message_id(
+        event["id"],
+        message_id
+    )
+
     stats["last_event"] = title
 
     print(
-        f"Sent {alert_type} alert for event {event['id']}"
+        f"Sent {alert_type} alert "
+        f"for event {event['id']}"
     )
 
 
-def check_alerts(events, alerts_state, stats):
-    now = datetime.now(timezone.utc)
+# ============================================================
+# CHECK ALERTS
+# ============================================================
+
+def check_alerts(
+    events,
+    alerts_state,
+    stats
+):
+
+    now = datetime.now(
+        timezone.utc
+    )
 
     for event in events:
 
-        event_id = str(event["id"])
+        event_id = str(
+            event["id"]
+        )
 
-        event_time = event.get("eventTime", {})
+        event_time = event.get(
+            "eventTime",
+            {}
+        )
 
         start = parse_time(
-            event_time.get("startUtc")
+            event_time.get(
+                "startUtc"
+            )
         )
 
         end = parse_time(
-            event_time.get("endUtc")
+            event_time.get(
+                "endUtc"
+            )
         )
 
         if not start:
             continue
 
+        # Ignore ended events
         if end and now >= end:
             continue
 
         if event_id not in alerts_state:
+
             alerts_state[event_id] = []
 
-        sent_alerts = alerts_state[event_id]
+        sent_alerts = (
+            alerts_state[event_id]
+        )
 
         seconds_until_start = (
             start - now
         ).total_seconds()
 
+        # ----------------------------------------------------
+        # 1 HOUR
+        # ----------------------------------------------------
+
         if (
             "1h" not in sent_alerts
-            and 0 < seconds_until_start <= 3600
+            and
+            0 < seconds_until_start <= 3600
         ):
 
             send_alert(
@@ -276,11 +636,18 @@ def check_alerts(events, alerts_state, stats):
                 stats
             )
 
-            sent_alerts.append("1h")
+            sent_alerts.append(
+                "1h"
+            )
+
+        # ----------------------------------------------------
+        # 15 MINUTES
+        # ----------------------------------------------------
 
         if (
             "15m" not in sent_alerts
-            and 0 < seconds_until_start <= 900
+            and
+            0 < seconds_until_start <= 900
         ):
 
             send_alert(
@@ -289,11 +656,18 @@ def check_alerts(events, alerts_state, stats):
                 stats
             )
 
-            sent_alerts.append("15m")
+            sent_alerts.append(
+                "15m"
+            )
+
+        # ----------------------------------------------------
+        # LIVE
+        # ----------------------------------------------------
 
         if (
             "start" not in sent_alerts
-            and seconds_until_start <= 0
+            and
+            seconds_until_start <= 0
         ):
 
             send_alert(
@@ -302,12 +676,272 @@ def check_alerts(events, alerts_state, stats):
                 stats
             )
 
-            sent_alerts.append("start")
+            sent_alerts.append(
+                "start"
+            )
 
     return alerts_state
 
 
-def send_control_message(payload, wait=False):
+# ============================================================
+# UPDATE COUNTDOWN
+# ============================================================
+
+def update_event_countdowns(
+    events
+):
+
+    message_state = load_json(
+        EVENT_MESSAGES_STATE_FILE,
+        {}
+    )
+
+    if not message_state:
+        return
+
+    for event in events:
+
+        event_id = str(
+            event["id"]
+        )
+
+        if event_id not in message_state:
+            continue
+
+        message_id = (
+            message_state[event_id]
+            .get("message_id")
+        )
+
+        if not message_id:
+            continue
+
+        event_time = event.get(
+            "eventTime",
+            {}
+        )
+
+        start = event_time.get(
+            "startUtc"
+        )
+
+        if not start:
+            continue
+
+        start_time = parse_time(
+            start
+        )
+
+        start_timestamp = get_timestamp(
+            start
+        )
+
+        if (
+            not start_time
+            or
+            not start_timestamp
+        ):
+            continue
+
+        title = (
+            event.get("displayTitle")
+            or event.get("title")
+            or "Roblox Event"
+        )
+
+        subtitle = (
+            event.get("displaySubtitle")
+            or event.get("subtitle")
+            or ""
+        )
+
+        description = (
+            event.get("displayDescription")
+            or event.get("description")
+            or ""
+        )
+
+        end = event_time.get(
+            "endUtc"
+        )
+
+        event_url = (
+            f"https://www.roblox.com/events/"
+            f"{event_id}"
+        )
+
+        fields = []
+
+        # ----------------------------------------------------
+        # DETAILS
+        # ----------------------------------------------------
+
+        if subtitle:
+
+            fields.append({
+
+                "name": "Details",
+
+                "value": subtitle[:1024],
+
+                "inline": False
+
+            })
+
+        # ----------------------------------------------------
+        # START
+        # ----------------------------------------------------
+
+        fields.append({
+
+            "name": "Starts",
+
+            "value": (
+                f"<t:{start_timestamp}:F>\n"
+                f"<t:{start_timestamp}:R>"
+            ),
+
+            "inline": True
+
+        })
+
+        # ----------------------------------------------------
+        # TIME REMAINING
+        # ----------------------------------------------------
+
+        time_remaining = (
+            format_time_remaining(
+                start_time
+            )
+        )
+
+        fields.append({
+
+            "name": "⏳ Time Remaining",
+
+            "value": (
+                f"**{time_remaining}**"
+            ),
+
+            "inline": True
+
+        })
+
+        # ----------------------------------------------------
+        # END
+        # ----------------------------------------------------
+
+        if end:
+
+            end_timestamp = get_timestamp(
+                end
+            )
+
+            if end_timestamp:
+
+                fields.append({
+
+                    "name": "Ends",
+
+                    "value": (
+                        f"<t:{end_timestamp}:F>\n"
+                        f"<t:{end_timestamp}:R>"
+                    ),
+
+                    "inline": True
+
+                })
+
+        # ----------------------------------------------------
+        # EMBED
+        # ----------------------------------------------------
+
+        embed = {
+
+            "title": title,
+
+            "url": event_url,
+
+            "description":
+                description[:4096],
+
+            "color":
+                EMBED_COLOR,
+
+            "fields":
+                fields,
+
+            "footer": {
+
+                "text":
+                    "SecretVerse Roblox Events"
+
+            }
+
+        }
+
+        payload = {
+
+            "username":
+                "Roblox Events",
+
+            "embeds": [
+                embed
+            ]
+
+        }
+
+        # ----------------------------------------------------
+        # EDIT EXISTING MESSAGE
+        # ----------------------------------------------------
+
+        url = (
+            f"{WEBHOOK_URL}"
+            f"/messages/{message_id}"
+        )
+
+        try:
+
+            response = requests.patch(
+                url,
+                json=payload,
+                timeout=30
+            )
+
+            if response.status_code == 404:
+
+                print(
+                    f"Message {message_id} "
+                    "was not found."
+                )
+
+                continue
+
+            response.raise_for_status()
+
+            print(
+                f"Countdown updated: "
+                f"{event_id} -> "
+                f"{time_remaining}"
+            )
+
+        except Exception as e:
+
+            print(
+                f"Countdown update failed "
+                f"for {event_id}: {e}"
+            )
+
+
+# ============================================================
+# CONTROL WEBHOOK
+# ============================================================
+
+def send_control_message(
+    payload,
+    wait=False
+):
+
     if not CONTROL_WEBHOOK_URL:
         return None
 
@@ -330,11 +964,22 @@ def send_control_message(payload, wait=False):
     return None
 
 
-def edit_control_message(message_id, payload):
-    if not CONTROL_WEBHOOK_URL or not message_id:
+def edit_control_message(
+    message_id,
+    payload
+):
+
+    if (
+        not CONTROL_WEBHOOK_URL
+        or
+        not message_id
+    ):
         return False
 
-    url = f"{CONTROL_WEBHOOK_URL}/messages/{message_id}"
+    url = (
+        f"{CONTROL_WEBHOOK_URL}"
+        f"/messages/{message_id}"
+    )
 
     response = requests.patch(
         url,
@@ -350,30 +995,64 @@ def edit_control_message(message_id, payload):
     return True
 
 
-def send_control_log(title, description):
+def send_control_log(
+    title,
+    description
+):
+
     if not CONTROL_WEBHOOK_URL:
         return
 
     payload = {
-        "username": "Roblox Bot Control",
+
+        "username":
+            "Roblox Bot Control",
+
         "embeds": [
+
             {
-                "title": title,
-                "description": description[:4096],
+
+                "title":
+                    title,
+
+                "description":
+                    description[:4096],
+
                 "footer": {
-                    "text": "Private Bot Control"
+
+                    "text":
+                        "Private Bot Control"
+
                 }
+
             }
+
         ]
+
     }
 
     try:
-        send_control_message(payload)
+
+        send_control_message(
+            payload
+        )
+
     except Exception as e:
-        print(f"Control log failed: {e}")
+
+        print(
+            f"Control log failed: {e}"
+        )
 
 
-def update_control_dashboard(stats, status, current_events):
+# ============================================================
+# CONTROL DASHBOARD
+# ============================================================
+
+def update_control_dashboard(
+    stats,
+    status,
+    current_events
+):
 
     if not CONTROL_WEBHOOK_URL:
         return
@@ -381,98 +1060,176 @@ def update_control_dashboard(stats, status, current_events):
     control_state = load_json(
         CONTROL_STATE_FILE,
         {
-            "dashboard_message_id": None
+            "dashboard_message_id":
+                None
         }
     )
 
     status_text = {
-        "online": "🟢 Online",
-        "error": "🔴 Error"
+
+        "online":
+            "🟢 Online",
+
+        "error":
+            "🔴 Error"
+
     }.get(
         status,
         "🟡 Unknown"
     )
 
-    last_run = stats.get(
-        "last_run"
-    ) or "Never"
+    last_run = (
+        stats.get(
+            "last_run"
+        )
+        or
+        "Never"
+    )
 
-    last_event = stats.get(
-        "last_event"
-    ) or "None yet"
+    last_event = (
+        stats.get(
+            "last_event"
+        )
+        or
+        "None yet"
+    )
 
     embed = {
-        "title": "🤖 Roblox Events Bot — Control Panel",
-        "description": "Private monitoring dashboard",
+
+        "title":
+            "🤖 Roblox Events Bot — Control Panel",
+
+        "description":
+            "Private monitoring dashboard",
+
+        "color":
+            EMBED_COLOR,
+
         "fields": [
 
             {
-                "name": "Status",
-                "value": status_text,
-                "inline": True
+                "name":
+                    "Status",
+
+                "value":
+                    status_text,
+
+                "inline":
+                    True
             },
 
             {
-                "name": "Current Events",
-                "value": str(current_events),
-                "inline": True
+                "name":
+                    "Current Events",
+
+                "value":
+                    str(current_events),
+
+                "inline":
+                    True
             },
 
             {
-                "name": "Runs",
-                "value": str(stats["runs"]),
-                "inline": True
+                "name":
+                    "Runs",
+
+                "value":
+                    str(stats["runs"]),
+
+                "inline":
+                    True
             },
 
             {
-                "name": "Events Checked",
-                "value": str(stats["events_checked"]),
-                "inline": True
+                "name":
+                    "Events Checked",
+
+                "value":
+                    str(stats["events_checked"]),
+
+                "inline":
+                    True
             },
 
             {
-                "name": "New Events",
-                "value": str(stats["new_events"]),
-                "inline": True
+                "name":
+                    "New Events",
+
+                "value":
+                    str(stats["new_events"]),
+
+                "inline":
+                    True
             },
 
             {
-                "name": "Notifications Sent",
-                "value": str(
-                    stats["notifications_sent"]
-                ),
-                "inline": True
+                "name":
+                    "Notifications Sent",
+
+                "value":
+                    str(
+                        stats[
+                            "notifications_sent"
+                        ]
+                    ),
+
+                "inline":
+                    True
             },
 
             {
-                "name": "Errors",
-                "value": str(stats["errors"]),
-                "inline": True
+                "name":
+                    "Errors",
+
+                "value":
+                    str(stats["errors"]),
+
+                "inline":
+                    True
             },
 
             {
-                "name": "Last Run",
-                "value": last_run,
-                "inline": False
+                "name":
+                    "Last Run",
+
+                "value":
+                    last_run,
+
+                "inline":
+                    False
             },
 
             {
-                "name": "Last Event",
-                "value": last_event[:1024],
-                "inline": False
+                "name":
+                    "Last Event",
+
+                "value":
+                    last_event[:1024],
+
+                "inline":
+                    False
             }
+
         ],
 
         "footer": {
-            "text": "Updates every 5 minutes"
+
+            "text":
+                "Updates every minute"
+
         }
+
     }
 
     payload = {
-        "username": "Roblox Bot Control",
+
+        "username":
+            "Roblox Bot Control",
+
         "embeds": [
             embed
         ]
+
     }
 
     message_id = control_state.get(
@@ -487,6 +1244,7 @@ def update_control_dashboard(stats, status, current_events):
                 message_id,
                 payload
             ):
+
                 return
 
         message = send_control_message(
@@ -494,7 +1252,11 @@ def update_control_dashboard(stats, status, current_events):
             wait=True
         )
 
-        if message and message.get("id"):
+        if (
+            message
+            and
+            message.get("id")
+        ):
 
             control_state[
                 "dashboard_message_id"
@@ -508,9 +1270,14 @@ def update_control_dashboard(stats, status, current_events):
     except Exception as e:
 
         print(
-            f"Control dashboard update failed: {e}"
+            f"Control dashboard update failed: "
+            f"{e}"
         )
 
+
+# ============================================================
+# MAIN
+# ============================================================
 
 def main():
 
@@ -529,12 +1296,22 @@ def main():
 
     try:
 
+        # ----------------------------------------------------
+        # GET EVENTS
+        # ----------------------------------------------------
+
         events = get_events()
 
-        # Only SecretVerse Studio events
+        # ----------------------------------------------------
+        # ONLY KEYBOARD MAP EVENTS
+        # ----------------------------------------------------
+
         events = [
+
             event
+
             for event in events
+
             if str(
                 event.get(
                     "host",
@@ -543,20 +1320,25 @@ def main():
                     "hostId"
                 )
             ) == GROUP_ID
+
         ]
 
-        stats["last_run_events"] = len(
-            events
+        stats["last_run_events"] = (
+            len(events)
         )
 
-        stats["events_checked"] += len(
-            events
+        stats["events_checked"] += (
+            len(events)
         )
 
         print(
             f"Found {len(events)} "
-            f"SecretVerse events."
+            "SecretVerse events."
         )
+
+        # ----------------------------------------------------
+        # LOAD STATES
+        # ----------------------------------------------------
 
         events_state = load_json(
             EVENTS_STATE_FILE,
@@ -568,28 +1350,38 @@ def main():
             {}
         )
 
+        # ----------------------------------------------------
+        # CURRENT EVENT IDS
+        # ----------------------------------------------------
+
         current_ids = {
+
             str(event["id"])
+
             for event in events
+
         }
 
-        # -------------------------
+        # ----------------------------------------------------
         # NEW EVENTS
-        # -------------------------
+        # ----------------------------------------------------
 
         if events_state is None:
 
             save_json(
+
                 EVENTS_STATE_FILE,
+
                 {
-                    "event_ids": sorted(
-                        current_ids
-                    )
+                    "event_ids":
+                        sorted(current_ids)
                 }
+
             )
 
             print(
-                "First run: existing events saved."
+                "First run: "
+                "existing events saved."
             )
 
             send_control_log(
@@ -604,25 +1396,34 @@ def main():
         else:
 
             old_ids = set(
+
                 events_state.get(
                     "event_ids",
                     []
                 )
+
             )
 
             new_events = [
+
                 event
+
                 for event in events
+
                 if str(event["id"])
                 not in old_ids
+
             ]
 
             new_events.sort(
+
                 key=lambda event:
+
                 event.get(
                     "createdUtc",
                     ""
                 )
+
             )
 
             for event in new_events:
@@ -633,12 +1434,14 @@ def main():
                 )
 
             save_json(
+
                 EVENTS_STATE_FILE,
+
                 {
-                    "event_ids": sorted(
-                        current_ids
-                    )
+                    "event_ids":
+                        sorted(current_ids)
                 }
+
             )
 
             print(
@@ -657,9 +1460,9 @@ def main():
                     )
                 )
 
-        # -------------------------
-        # EVENT ALERTS
-        # -------------------------
+        # ----------------------------------------------------
+        # ALERT SYSTEM
+        # ----------------------------------------------------
 
         alerts_state = check_alerts(
             events,
@@ -672,10 +1475,26 @@ def main():
             alerts_state
         )
 
+        # ----------------------------------------------------
+        # UPDATE COUNTDOWNS
+        # ----------------------------------------------------
+
+        update_event_countdowns(
+            events
+        )
+
+        # ----------------------------------------------------
+        # SAVE STATS
+        # ----------------------------------------------------
+
         save_json(
             STATS_STATE_FILE,
             stats
         )
+
+        # ----------------------------------------------------
+        # CONTROL PANEL
+        # ----------------------------------------------------
 
         update_control_dashboard(
             stats,
@@ -720,5 +1539,10 @@ def main():
         )
 
 
+# ============================================================
+# START
+# ============================================================
+
 if __name__ == "__main__":
+
     main()
