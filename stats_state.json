@@ -1,10 +1,10 @@
 {
-  "runs": 20,
-  "events_checked": 20,
+  "runs": 21,
+  "events_checked": 21,
   "new_events": 1,
   "notifications_sent": 1,
   "errors": 0,
-  "last_run": "2026-08-23T07:51:02.823715+00:00",
+  "last_run": "2026-08-23T08:13:10.439365+00:00",
   "last_event": "BOSS FIGHT WITH A DEV????",
   "last_run_events": 1
 }
