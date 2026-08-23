@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 
 # ============================================================
-# الإعدادات
+# SETTINGS
 # ============================================================
 
 GROUP_ID = "1074557114"
@@ -25,7 +25,7 @@ STATS_STATE_FILE = "stats_state.json"
 CONTROL_STATE_FILE = "control_state.json"
 EVENT_MESSAGES_STATE_FILE = "event_messages_state.json"
 
-# اللون الوردي
+# Pink
 EMBED_COLOR = 0xFF69B4
 
 
@@ -74,40 +74,30 @@ def save_json(filename, data):
 
 
 # ============================================================
-# الإحصائيات
+# STATS
 # ============================================================
 
 def default_stats():
 
     return {
-
         "runs": 0,
-
         "events_checked": 0,
-
         "new_events": 0,
-
         "notifications_sent": 0,
-
         "errors": 0,
-
         "last_run": None,
-
         "last_event": None,
-
         "last_run_events": 0
-
     }
 
 
 # ============================================================
-# جلب فعاليات Roblox
+# ROBLOX EVENTS
 # ============================================================
 
 def get_events():
 
     events = []
-
     cursor = ""
 
     while True:
@@ -115,7 +105,6 @@ def get_events():
         params = {}
 
         if cursor:
-
             params["cursor"] = cursor
 
         response = requests.get(
@@ -129,10 +118,7 @@ def get_events():
         data = response.json()
 
         events.extend(
-            data.get(
-                "data",
-                []
-            )
+            data.get("data", [])
         )
 
         cursor = data.get(
@@ -140,27 +126,22 @@ def get_events():
         )
 
         if not cursor:
-
             break
 
     return events
 
 
 # ============================================================
-# الوقت
+# TIME
 # ============================================================
 
 def parse_time(value):
 
     if not value:
-
         return None
 
     return datetime.fromisoformat(
-        value.replace(
-            "Z",
-            "+00:00"
-        )
+        value.replace("Z", "+00:00")
     )
 
 
@@ -169,7 +150,6 @@ def get_timestamp(value):
     parsed = parse_time(value)
 
     if not parsed:
-
         return None
 
     return int(
@@ -177,9 +157,7 @@ def get_timestamp(value):
     )
 
 
-def format_arabic_time_remaining(
-    start_time
-):
+def format_time_remaining(start_time):
 
     now = datetime.now(
         timezone.utc
@@ -192,7 +170,6 @@ def format_arabic_time_remaining(
     )
 
     if total_seconds <= 0:
-
         return "🔴 **الفعالية مباشرة الآن**"
 
     days = (
@@ -215,7 +192,7 @@ def format_arabic_time_remaining(
 
 
 # ============================================================
-# حفظ Message ID
+# MESSAGE STATE
 # ============================================================
 
 def get_message_state():
@@ -234,10 +211,7 @@ def save_message_id(
     state = get_message_state()
 
     state[str(event_id)] = {
-
-        "message_id":
-            str(message_id)
-
+        "message_id": str(message_id)
     }
 
     save_json(
@@ -247,50 +221,33 @@ def save_message_id(
 
 
 # ============================================================
-# بناء رسالة Discord
+# EVENT EMBED
 # ============================================================
 
 def build_event_payload(
     event,
-    message
+    message="",
+    mention_everyone=False
 ):
 
     event_id = event["id"]
 
     title = (
-        event.get(
-            "displayTitle"
-        )
-        or
-        event.get(
-            "title"
-        )
-        or
-        "فعالية Roblox"
+        event.get("displayTitle")
+        or event.get("title")
+        or "فعالية Roblox"
     )
 
     subtitle = (
-        event.get(
-            "displaySubtitle"
-        )
-        or
-        event.get(
-            "subtitle"
-        )
-        or
-        ""
+        event.get("displaySubtitle")
+        or event.get("subtitle")
+        or ""
     )
 
     description = (
-        event.get(
-            "displayDescription"
-        )
-        or
-        event.get(
-            "description"
-        )
-        or
-        ""
+        event.get("displayDescription")
+        or event.get("description")
+        or ""
     )
 
     event_time = event.get(
@@ -314,140 +271,81 @@ def build_event_payload(
     fields = []
 
     # --------------------------------------------------------
-    # الوصف
+    # Description
     # --------------------------------------------------------
 
     if description:
 
         fields.append({
-
-            "name":
-                "📖 وصف الفعالية",
-
-            "value":
-                description[:1024],
-
-            "inline":
-                False
-
+            "name": "📖 وصف الفعالية",
+            "value": description[:1024],
+            "inline": False
         })
 
     # --------------------------------------------------------
-    # التفاصيل
+    # Details
     # --------------------------------------------------------
 
     if subtitle:
 
         fields.append({
-
-            "name":
-                "ℹ️ التفاصيل",
-
-            "value":
-                subtitle[:1024],
-
-            "inline":
-                False
-
+            "name": "ℹ️ التفاصيل",
+            "value": subtitle[:1024],
+            "inline": False
         })
 
     # --------------------------------------------------------
-    # البداية والعداد
+    # Start + Countdown
     # --------------------------------------------------------
 
     if start:
 
-        start_time = parse_time(
-            start
-        )
+        start_time = parse_time(start)
+        start_timestamp = get_timestamp(start)
 
-        start_timestamp = get_timestamp(
-            start
-        )
-
-        if (
-            start_time
-            and
-            start_timestamp
-        ):
+        if start_time and start_timestamp:
 
             fields.append({
-
-                "name":
-                    "📅 موعد البداية",
-
-                "value":
-                    (
-                        f"<t:{start_timestamp}:F>"
-                    ),
-
-                "inline":
-                    False
-
+                "name": "📅 موعد البداية",
+                "value": f"<t:{start_timestamp}:F>",
+                "inline": False
             })
 
             fields.append({
-
-                "name":
-                    "⏳ الوقت المتبقي",
-
-                "value":
-                    (
-                        format_arabic_time_remaining(
-                            start_time
-                        )
-                    ),
-
-                "inline":
-                    False
-
+                "name": "⏳ الوقت المتبقي",
+                "value": format_time_remaining(
+                    start_time
+                ),
+                "inline": False
             })
 
     # --------------------------------------------------------
-    # النهاية
+    # End
     # --------------------------------------------------------
 
     if end:
 
-        end_timestamp = get_timestamp(
-            end
-        )
+        end_timestamp = get_timestamp(end)
 
         if end_timestamp:
 
             fields.append({
-
-                "name":
-                    "🏁 موعد الانتهاء",
-
-                "value":
-                    (
-                        f"<t:{end_timestamp}:F>"
-                    ),
-
-                "inline":
-                    False
-
+                "name": "🏁 موعد الانتهاء",
+                "value": f"<t:{end_timestamp}:F>",
+                "inline": False
             })
 
     # --------------------------------------------------------
-    # الرابط
+    # Roblox Link
     # --------------------------------------------------------
 
     fields.append({
-
-        "name":
-            "🔗 صفحة الفعالية",
-
-        "value":
-            (
-                f"[اضغط هنا لفتح الفعالية]"
-                f"({event_url})"
-            ),
-
-        "inline":
-            False
-
+        "name": "🔗 صفحة الفعالية",
+        "value": (
+            f"[اضغط هنا لفتح الفعالية]"
+            f"({event_url})"
+        ),
+        "inline": False
     })
 
     # --------------------------------------------------------
@@ -457,67 +355,73 @@ def build_event_payload(
     embed = {
 
         "author": {
-
-            "name":
-                "🩷 SecretVerse Events"
-
+            "name": "🩷 SecretVerse Events"
         },
 
-        "title":
-            f"🎉 {title}",
+        "title": f"🎉 {title}",
 
-        "url":
-            event_url,
+        "url": event_url,
 
-        "description":
-            (
-                "✨ **فعالية جديدة!**\n\n"
-                "تابع تفاصيل الفعالية وموعد "
-                "بدئها بالأسفل."
-            ),
+        "description": (
+            "✨ **فعالية Roblox**\n\n"
+            "تابع تفاصيل الفعالية "
+            "وموعد بدايتها بالأسفل."
+        ),
 
-        "color":
-            EMBED_COLOR,
+        "color": EMBED_COLOR,
 
-        "fields":
-            fields,
+        "fields": fields,
 
         "footer": {
-
             "text":
                 "SecretVerse Roblox Events • يتحدث تلقائيًا"
+        }
+    }
 
+    payload = {
+
+        "username": "SecretVerse Events",
+
+        "content": message,
+
+        "embeds": [embed]
+
+    }
+
+    # --------------------------------------------------------
+    # Allow @everyone
+    # --------------------------------------------------------
+
+    if mention_everyone:
+
+        payload["allowed_mentions"] = {
+            "parse": ["everyone"]
         }
 
-    }
+    else:
 
-    return {
+        payload["allowed_mentions"] = {
+            "parse": []
+        }
 
-        "username":
-            "SecretVerse Events",
-
-        "content":
-            message,
-
-        "embeds":
-            [embed]
-
-    }
+    return payload
 
 
 # ============================================================
-# إرسال رسالة جديدة
+# SEND DISCORD MESSAGE
 # ============================================================
 
 def send_to_discord(
     event,
     message,
-    stats
+    stats,
+    mention_everyone=False
 ):
 
     payload = build_event_payload(
         event,
-        message
+        message,
+        mention_everyone
     )
 
     response = requests.post(
@@ -534,19 +438,15 @@ def send_to_discord(
 
     data = response.json()
 
-    message_id = data.get(
-        "id"
-    )
+    message_id = data.get("id")
 
     if not message_id:
 
         raise RuntimeError(
-            "Discord did not return a message ID."
+            "Discord did not return message ID."
         )
 
-    stats[
-        "notifications_sent"
-    ] += 1
+    stats["notifications_sent"] += 1
 
     print(
         f"Discord message sent: "
@@ -557,7 +457,7 @@ def send_to_discord(
 
 
 # ============================================================
-# فعالية جديدة
+# NEW EVENT
 # ============================================================
 
 def send_new_event(
@@ -566,52 +466,31 @@ def send_new_event(
 ):
 
     title = (
-
-        event.get(
-            "displayTitle"
-        )
-
-        or
-
-        event.get(
-            "title"
-        )
-
-        or
-
-        "فعالية جديدة"
-
+        event.get("displayTitle")
+        or event.get("title")
+        or "فعالية جديدة"
     )
 
     message = (
-        "📢 **فعالية جديدة!**"
+        "@everyone\n"
+        "📢 **فعالية جديدة!**\n\n"
+        f"🎉 **{title}**"
     )
 
     message_id = send_to_discord(
-
         event,
-
         message,
-
-        stats
-
+        stats,
+        mention_everyone=True
     )
 
     save_message_id(
-
         event["id"],
-
         message_id
-
     )
 
-    stats[
-        "new_events"
-    ] += 1
-
-    stats[
-        "last_event"
-    ] = title
+    stats["new_events"] += 1
+    stats["last_event"] = title
 
     print(
         f"New event announced: "
@@ -620,7 +499,7 @@ def send_new_event(
 
 
 # ============================================================
-# التنبيهات
+# ALERTS
 # ============================================================
 
 def send_alert(
@@ -630,69 +509,76 @@ def send_alert(
 ):
 
     title = (
-
-        event.get(
-            "displayTitle"
-        )
-
-        or
-
-        event.get(
-            "title"
-        )
-
-        or
-
-        "فعالية Roblox"
-
+        event.get("displayTitle")
+        or event.get("title")
+        or "فعالية Roblox"
     )
 
     messages = {
 
-        "1h":
-            (
-                "🟡 **الفعالية تبدأ خلال ساعة!**"
-            ),
+        "1h": (
+            "@everyone\n"
+            "🟡 **تنبيه الفعالية**\n\n"
+            f"🎉 **{title}**\n\n"
+            "⏰ تبدأ الفعالية خلال "
+            "**ساعة واحدة**!"
+        ),
 
-        "15m":
-            (
-                "🟠 **الفعالية تبدأ خلال 15 دقيقة!**"
-            ),
+        "30m": (
+            "@everyone\n"
+            "🟠 **تنبيه الفعالية**\n\n"
+            f"🎉 **{title}**\n\n"
+            "⏰ تبدأ الفعالية خلال "
+            "**30 دقيقة**!"
+        ),
 
-        "start":
-            (
-                "🔴 **الفعالية بدأت الآن!**"
-            )
+        "15m": (
+            "@everyone\n"
+            "🟠 **تنبيه الفعالية**\n\n"
+            f"🎉 **{title}**\n\n"
+            "⏰ تبدأ الفعالية خلال "
+            "**15 دقيقة**!"
+        ),
 
+        "5m": (
+            "@everyone\n"
+            "🔴 **تنبيه الفعالية**\n\n"
+            f"🎉 **{title}**\n\n"
+            "🚨 تبدأ الفعالية خلال "
+            "**5 دقائق**!"
+        ),
+
+        "start": (
+            "@everyone\n"
+            "🚨 **الفعالية بدأت الآن!**\n\n"
+            f"🎉 **{title}**\n\n"
+            "🔥 **ادخل الآن!**"
+        )
     }
 
-    message_id = send_to_discord(
+    message = messages.get(
+        alert_type,
+        "@everyone\n🔔 **تنبيه فعالية**"
+    )
 
+    send_to_discord(
         event,
-
-        messages[alert_type],
-
-        stats
-
+        message,
+        stats,
+        mention_everyone=True
     )
 
-    save_message_id(
-
-        event["id"],
-
-        message_id
-
-    )
-
-    stats[
-        "last_event"
-    ] = title
+    stats["last_event"] = title
 
     print(
         f"Sent {alert_type} alert "
-        f"for {event['id']}"
+        f"for event {event['id']}"
     )
 
+
+# ============================================================
+# CHECK ALERTS
+# ============================================================
 
 def check_alerts(
     events,
@@ -728,121 +614,118 @@ def check_alerts(
         )
 
         if not start:
-
             continue
 
         if end and now >= end:
-
             continue
 
         if event_id not in alerts_state:
 
-            alerts_state[
-                event_id
-            ] = []
+            alerts_state[event_id] = []
 
         sent_alerts = (
-            alerts_state[
-                event_id
-            ]
+            alerts_state[event_id]
         )
 
         seconds_until_start = (
-
             start - now
-
         ).total_seconds()
 
+        # ====================================================
+        # 1 HOUR
+        # ====================================================
+
         if (
-
-            "1h"
-            not in sent_alerts
-
+            "1h" not in sent_alerts
             and
-
-            0
-            <
-            seconds_until_start
-            <=
-            3600
-
+            0 < seconds_until_start <= 3600
         ):
 
             send_alert(
-
                 event,
-
                 "1h",
-
                 stats
-
             )
 
-            sent_alerts.append(
-                "1h"
-            )
+            sent_alerts.append("1h")
+
+        # ====================================================
+        # 30 MINUTES
+        # ====================================================
 
         if (
-
-            "15m"
-            not in sent_alerts
-
+            "30m" not in sent_alerts
             and
-
-            0
-            <
-            seconds_until_start
-            <=
-            900
-
+            0 < seconds_until_start <= 1800
         ):
 
             send_alert(
-
                 event,
+                "30m",
+                stats
+            )
 
+            sent_alerts.append("30m")
+
+        # ====================================================
+        # 15 MINUTES
+        # ====================================================
+
+        if (
+            "15m" not in sent_alerts
+            and
+            0 < seconds_until_start <= 900
+        ):
+
+            send_alert(
+                event,
                 "15m",
-
                 stats
-
             )
 
-            sent_alerts.append(
-                "15m"
-            )
+            sent_alerts.append("15m")
+
+        # ====================================================
+        # 5 MINUTES
+        # ====================================================
 
         if (
-
-            "start"
-            not in sent_alerts
-
+            "5m" not in sent_alerts
             and
-
-            seconds_until_start
-            <=
-            0
-
+            0 < seconds_until_start <= 300
         ):
 
             send_alert(
-
                 event,
-
-                "start",
-
+                "5m",
                 stats
-
             )
 
-            sent_alerts.append(
-                "start"
+            sent_alerts.append("5m")
+
+        # ====================================================
+        # START
+        # ====================================================
+
+        if (
+            "start" not in sent_alerts
+            and
+            seconds_until_start <= 0
+        ):
+
+            send_alert(
+                event,
+                "start",
+                stats
             )
+
+            sent_alerts.append("start")
 
     return alerts_state
 
 
 # ============================================================
-# تحديث رسالة الفعالية
+# UPDATE EVENT MESSAGE
 # ============================================================
 
 def update_event_message(
@@ -865,52 +748,38 @@ def update_event_message(
         return
 
     message_id = (
-        state[
-            event_id
-        ].get(
+        state[event_id].get(
             "message_id"
         )
     )
 
     if not message_id:
-
         return
 
     payload = build_event_payload(
-
         event,
-
-        ""
-
+        "",
+        False
     )
 
     url = (
-
         f"{WEBHOOK_URL}"
         f"/messages/{message_id}"
-
     )
 
     try:
 
         response = requests.patch(
-
             url,
-
             json=payload,
-
             timeout=30
-
         )
 
         if response.status_code == 404:
 
             print(
-
                 f"Discord message "
-                f"{message_id} "
-                f"not found."
-
+                f"{message_id} not found."
             )
 
             return
@@ -918,44 +787,34 @@ def update_event_message(
         response.raise_for_status()
 
         event_time = event.get(
-
             "eventTime",
-
             {}
-
         )
 
         start = parse_time(
-
             event_time.get(
                 "startUtc"
             )
-
         )
 
         if start:
 
             print(
-
                 f"Updated event "
                 f"{event_id}: "
-
-                f"{format_arabic_time_remaining(start)}"
-
+                f"{format_time_remaining(start)}"
             )
 
     except Exception as e:
 
         print(
-
             f"Failed to update event "
             f"{event_id}: {e}"
-
         )
 
 
 # ============================================================
-# تحديث كل العدادات
+# UPDATE ALL COUNTDOWNS
 # ============================================================
 
 def update_all_countdowns(
@@ -983,29 +842,22 @@ def send_control_message(
 ):
 
     if not CONTROL_WEBHOOK_URL:
-
         return None
 
     url = CONTROL_WEBHOOK_URL
 
     if wait:
-
         url += "?wait=true"
 
     response = requests.post(
-
         url,
-
         json=payload,
-
         timeout=30
-
     )
 
     response.raise_for_status()
 
     if wait:
-
         return response.json()
 
     return None
@@ -1017,36 +869,24 @@ def edit_control_message(
 ):
 
     if (
-
         not CONTROL_WEBHOOK_URL
-
         or
-
         not message_id
-
     ):
-
         return False
 
     url = (
-
         f"{CONTROL_WEBHOOK_URL}"
         f"/messages/{message_id}"
-
     )
 
     response = requests.patch(
-
         url,
-
         json=payload,
-
         timeout=30
-
     )
 
     if response.status_code == 404:
-
         return False
 
     response.raise_for_status()
@@ -1064,7 +904,6 @@ def send_control_log(
 ):
 
     if not CONTROL_WEBHOOK_URL:
-
         return
 
     payload = {
@@ -1122,7 +961,6 @@ def update_control_dashboard(
 ):
 
     if not CONTROL_WEBHOOK_URL:
-
         return
 
     control_state = load_json(
@@ -1145,35 +983,20 @@ def update_control_dashboard(
             "🔴 خطأ"
 
     }.get(
-
         status,
-
         "🟡 غير معروف"
-
     )
 
     last_run = (
-
-        stats.get(
-            "last_run"
-        )
-
+        stats.get("last_run")
         or
-
         "لم يتم التشغيل بعد"
-
     )
 
     last_event = (
-
-        stats.get(
-            "last_event"
-        )
-
+        stats.get("last_event")
         or
-
         "لا يوجد"
-
     )
 
     embed = {
@@ -1190,151 +1013,73 @@ def update_control_dashboard(
         "fields": [
 
             {
-
-                "name":
-                    "الحالة",
-
-                "value":
-                    status_text,
-
-                "inline":
-                    True
-
+                "name": "الحالة",
+                "value": status_text,
+                "inline": True
             },
 
             {
-
-                "name":
-                    "الفعاليات الحالية",
-
-                "value":
-                    str(
-                        current_events
-                    ),
-
-                "inline":
-                    True
-
+                "name": "الفعاليات الحالية",
+                "value": str(current_events),
+                "inline": True
             },
 
             {
-
-                "name":
-                    "مرات التشغيل",
-
-                "value":
-                    str(
-                        stats["runs"]
-                    ),
-
-                "inline":
-                    True
-
+                "name": "مرات التشغيل",
+                "value": str(stats["runs"]),
+                "inline": True
             },
 
             {
-
-                "name":
-                    "الفعاليات المفحوصة",
-
-                "value":
-                    str(
-                        stats[
-                            "events_checked"
-                        ]
-                    ),
-
-                "inline":
-                    True
-
+                "name": "الفعاليات المفحوصة",
+                "value": str(
+                    stats["events_checked"]
+                ),
+                "inline": True
             },
 
             {
-
-                "name":
-                    "فعاليات جديدة",
-
-                "value":
-                    str(
-                        stats[
-                            "new_events"
-                        ]
-                    ),
-
-                "inline":
-                    True
-
+                "name": "فعاليات جديدة",
+                "value": str(
+                    stats["new_events"]
+                ),
+                "inline": True
             },
 
             {
-
-                "name":
-                    "الإشعارات المرسلة",
-
-                "value":
-                    str(
-                        stats[
-                            "notifications_sent"
-                        ]
-                    ),
-
-                "inline":
-                    True
-
+                "name": "الإشعارات المرسلة",
+                "value": str(
+                    stats["notifications_sent"]
+                ),
+                "inline": True
             },
 
             {
-
-                "name":
-                    "الأخطاء",
-
-                "value":
-                    str(
-                        stats[
-                            "errors"
-                        ]
-                    ),
-
-                "inline":
-                    True
-
+                "name": "الأخطاء",
+                "value": str(
+                    stats["errors"]
+                ),
+                "inline": True
             },
 
             {
-
-                "name":
-                    "آخر تشغيل",
-
-                "value":
-                    last_run,
-
-                "inline":
-                    False
-
+                "name": "آخر تشغيل",
+                "value": last_run,
+                "inline": False
             },
 
             {
-
-                "name":
-                    "آخر فعالية",
-
-                "value":
-                    last_event[:1024],
-
-                "inline":
-                    False
-
+                "name": "آخر فعالية",
+                "value": last_event[:1024],
+                "inline": False
             }
 
         ],
 
         "footer": {
-
             "text":
                 "يتحدث كل دقيقة"
-
         }
-
     }
 
     payload = {
@@ -1348,9 +1093,7 @@ def update_control_dashboard(
     }
 
     message_id = control_state.get(
-
         "dashboard_message_id"
-
     )
 
     try:
@@ -1358,31 +1101,20 @@ def update_control_dashboard(
         if message_id:
 
             if edit_control_message(
-
                 message_id,
-
                 payload
-
             ):
-
                 return
 
         message = send_control_message(
-
             payload,
-
             wait=True
-
         )
 
         if (
-
             message
-
             and
-
             message.get("id")
-
         ):
 
             control_state[
@@ -1390,20 +1122,15 @@ def update_control_dashboard(
             ] = message["id"]
 
             save_json(
-
                 CONTROL_STATE_FILE,
-
                 control_state
-
             )
 
     except Exception as e:
 
         print(
-
             f"Control dashboard update "
             f"failed: {e}"
-
         )
 
 
@@ -1414,33 +1141,28 @@ def update_control_dashboard(
 def main():
 
     stats = load_json(
-
         STATS_STATE_FILE,
-
         default_stats()
-
     )
 
     stats["runs"] += 1
 
     stats["last_run"] = (
-
         datetime.now(
             timezone.utc
         ).isoformat()
-
     )
 
     try:
 
         # ----------------------------------------------------
-        # جلب الفعاليات
+        # GET EVENTS
         # ----------------------------------------------------
 
         events = get_events()
 
         # ----------------------------------------------------
-        # فعاليات SecretVerse فقط
+        # SECRETVERSE ONLY
         # ----------------------------------------------------
 
         events = [
@@ -1450,19 +1172,12 @@ def main():
             for event in events
 
             if str(
-
                 event.get(
-
                     "host",
-
                     {}
-
                 ).get(
-
                     "hostId"
-
                 )
-
             ) == GROUP_ID
 
         ]
@@ -1476,97 +1191,65 @@ def main():
         ] += len(events)
 
         print(
-
             f"Found {len(events)} "
-            "SecretVerse events."
-
+            f"SecretVerse events."
         )
 
         # ----------------------------------------------------
-        # تحميل الحالات
+        # LOAD STATES
         # ----------------------------------------------------
 
         events_state = load_json(
-
             EVENTS_STATE_FILE,
-
             None
-
         )
 
         alerts_state = load_json(
-
             ALERTS_STATE_FILE,
-
             {}
-
         )
 
         current_ids = {
-
-            str(
-                event["id"]
-            )
-
+            str(event["id"])
             for event in events
-
         }
 
         # ----------------------------------------------------
-        # الفعاليات الجديدة
+        # NEW EVENTS
         # ----------------------------------------------------
 
         if events_state is None:
 
             save_json(
-
                 EVENTS_STATE_FILE,
-
                 {
-
                     "event_ids":
-                        sorted(
-                            current_ids
-                        )
-
+                        sorted(current_ids)
                 }
-
             )
 
             print(
-
-                "First run: "
-                "existing events saved."
-
+                "First run: existing "
+                "events saved."
             )
 
             send_control_log(
-
                 "🟢 تم تشغيل البوت",
-
                 (
-
                     "تم تشغيل البوت لأول مرة. "
                     f"تم العثور على "
                     f"**{len(events)}** "
                     "فعالية موجودة."
-
                 )
-
             )
 
         else:
 
             old_ids = set(
-
                 events_state.get(
-
                     "event_ids",
-
                     []
-
                 )
-
             )
 
             new_events = [
@@ -1575,131 +1258,90 @@ def main():
 
                 for event in events
 
-                if str(
-                    event["id"]
-                )
+                if str(event["id"])
                 not in old_ids
 
             ]
 
             new_events.sort(
-
                 key=lambda event:
-
                     event.get(
-
                         "createdUtc",
-
                         ""
-
                     )
-
             )
 
             for event in new_events:
 
                 send_new_event(
-
                     event,
-
                     stats
-
                 )
 
             save_json(
-
                 EVENTS_STATE_FILE,
-
                 {
-
                     "event_ids":
-                        sorted(
-                            current_ids
-                        )
-
+                        sorted(current_ids)
                 }
-
             )
 
             print(
-
                 f"New events announced: "
                 f"{len(new_events)}"
-
             )
 
             if new_events:
 
                 send_control_log(
-
                     "📢 تم اكتشاف فعالية جديدة",
-
                     (
-
                         "تم اكتشاف وإرسال "
                         f"**{len(new_events)}** "
                         "فعالية جديدة."
-
                     )
-
                 )
 
         # ----------------------------------------------------
-        # التنبيهات
+        # ALERTS
         # ----------------------------------------------------
 
         alerts_state = check_alerts(
-
             events,
-
             alerts_state,
-
             stats
-
         )
 
         save_json(
-
             ALERTS_STATE_FILE,
-
             alerts_state
-
         )
 
         # ----------------------------------------------------
-        # تحديث العدادات
+        # UPDATE COUNTDOWNS
         # ----------------------------------------------------
 
         update_all_countdowns(
-
             events
-
         )
 
         # ----------------------------------------------------
-        # حفظ الإحصائيات
+        # SAVE STATS
         # ----------------------------------------------------
 
         save_json(
-
             STATS_STATE_FILE,
-
             stats
-
         )
 
         # ----------------------------------------------------
-        # لوحة التحكم
+        # CONTROL DASHBOARD
         # ----------------------------------------------------
 
         update_control_dashboard(
-
             stats,
-
             "online",
-
             len(events)
-
         )
 
         print(
@@ -1719,46 +1361,31 @@ def main():
         stats["errors"] += 1
 
         save_json(
-
             STATS_STATE_FILE,
-
             stats
-
         )
 
         try:
 
             send_control_log(
-
                 "🔴 خطأ في البوت",
-
                 f"```{str(e)[:3500]}```"
-
             )
 
             update_control_dashboard(
-
                 stats,
-
                 "error",
-
                 stats.get(
-
                     "last_run_events",
-
                     0
-
                 )
-
             )
 
         except Exception as control_error:
 
             print(
-
                 f"Control error: "
                 f"{control_error}"
-
             )
 
         raise
@@ -1766,16 +1393,13 @@ def main():
     finally:
 
         save_json(
-
             STATS_STATE_FILE,
-
             stats
-
         )
 
 
 # ============================================================
-# تشغيل البوت
+# START
 # ============================================================
 
 if __name__ == "__main__":
