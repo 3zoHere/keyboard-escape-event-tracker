@@ -1,10 +1,10 @@
 {
-  "runs": 46,
-  "events_checked": 67,
+  "runs": 47,
+  "events_checked": 68,
   "new_events": 2,
   "notifications_sent": 2,
   "errors": 0,
-  "last_run": "2026-08-23T17:53:45.464432+00:00",
+  "last_run": "2026-08-23T18:09:45.240471+00:00",
   "last_event": "GALAXY 2... ",
-  "last_run_events": 2
+  "last_run_events": 1
 }
