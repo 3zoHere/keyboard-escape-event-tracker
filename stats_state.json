@@ -1,10 +1,10 @@
 {
-  "runs": 182,
-  "events_checked": 211,
+  "runs": 183,
+  "events_checked": 212,
   "new_events": 4,
   "notifications_sent": 5,
   "errors": 0,
-  "last_run": "2026-08-30T16:38:56.038897+00:00",
+  "last_run": "2026-08-30T19:25:31.651992+00:00",
   "last_event": "GALAXY 2... ADMIN ABUSE",
-  "last_run_events": 2
+  "last_run_events": 1
 }
