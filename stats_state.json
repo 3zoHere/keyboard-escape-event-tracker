@@ -1,10 +1,10 @@
 {
-  "runs": 250,
-  "events_checked": 287,
+  "runs": 251,
+  "events_checked": 288,
   "new_events": 5,
   "notifications_sent": 9,
   "errors": 0,
-  "last_run": "2026-09-08T22:36:44.104677+00:00",
+  "last_run": "2026-09-09T00:32:35.510672+00:00",
   "last_event": "ADMIN ABUSE ",
   "last_run_events": 1
 }
