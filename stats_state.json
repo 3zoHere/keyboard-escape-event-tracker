@@ -1,10 +1,10 @@
 {
-  "runs": 385,
-  "events_checked": 566,
+  "runs": 386,
+  "events_checked": 567,
   "new_events": 131,
   "notifications_sent": 144,
   "errors": 0,
-  "last_run": "2026-09-30T06:49:44.214920+00:00",
+  "last_run": "2026-09-30T13:03:08.651472+00:00",
   "last_event": "The Hunt - Roblox 20",
-  "last_run_events": 12
+  "last_run_events": 1
 }
