@@ -1,10 +1,10 @@
 {
-  "runs": 405,
-  "events_checked": 635,
-  "new_events": 165,
-  "notifications_sent": 179,
+  "runs": 406,
+  "events_checked": 666,
+  "new_events": 194,
+  "notifications_sent": 208,
   "errors": 0,
-  "last_run": "2026-10-04T20:06:01.013514+00:00",
-  "last_event": "Admin Abuse",
-  "last_run_events": 2
+  "last_run": "2026-10-04T23:01:05.143742+00:00",
+  "last_event": "Halloween World",
+  "last_run_events": 31
 }
