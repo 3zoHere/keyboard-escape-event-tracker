@@ -1,10 +1,10 @@
 {
-  "runs": 418,
-  "events_checked": 748,
+  "runs": 419,
+  "events_checked": 750,
   "new_events": 194,
   "notifications_sent": 208,
   "errors": 0,
-  "last_run": "2026-10-07T18:59:24.848856+00:00",
+  "last_run": "2026-10-08T02:49:51.075555+00:00",
   "last_event": "Halloween World",
   "last_run_events": 2
 }
